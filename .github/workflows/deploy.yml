@@ -44,7 +44,10 @@ jobs:
               "comets":[{"designation":c.get("designation"),"name":c.get("name"),"ephemerisSource":c.get("ephemerisSource")} for c in data.get("comets",[])]
           },ensure_ascii=False,indent=2))
           names=" ".join(str(c.get("designation",""))+" "+str(c.get("name","")) for c in data.get("comets",[])).upper()
-          if "2020 F3" not in names and "NEOWISE" not in names:
+          neo=next((c for c in data.get("comets",[]) if "2020 F3" in (str(c.get("designation",""))+" "+str(c.get("name",""))).upper() or "NEOWISE" in (str(c.get("designation",""))+" "+str(c.get("name",""))).upper()), None)
+          if not neo:
               print("NEOWISE was not returned by /night-comets", file=sys.stderr)
               sys.exit(1)
+          pts=neo.get("points") or []
+          print(json.dumps({"neowisePointCount":len(pts),"first":pts[0] if pts else None,"last":pts[-1] if pts else None,"middle":pts[len(pts)//2] if pts else None},ensure_ascii=False,indent=2))
           PY
