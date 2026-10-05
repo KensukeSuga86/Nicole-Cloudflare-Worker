@@ -25,3 +25,26 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+
+      - name: Smoke test historical comet lookup
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://astro-nicole.hideld12.workers.dev/night-comets?lat=42.9236&lon=143.1961&alt_m=40&obs_time=2020-07-15T21%3A00%3A00%2B09%3A00&vmag_max=12&max_comets=20&step_minutes=15&candidate_mode=hybrid'
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 "$URL" -o response.json
+          python3 - <<'PY'
+          import json, sys
+          data=json.load(open("response.json",encoding="utf-8"))
+          print(json.dumps({
+              "ok":data.get("ok"),
+              "candidateMode":data.get("candidateMode"),
+              "historical":data.get("historical"),
+              "candidateStats":data.get("candidateStats"),
+              "warnings":data.get("warnings"),
+              "comets":[{"designation":c.get("designation"),"name":c.get("name"),"ephemerisSource":c.get("ephemerisSource")} for c in data.get("comets",[])]
+          },ensure_ascii=False,indent=2))
+          names=" ".join(str(c.get("designation",""))+" "+str(c.get("name","")) for c in data.get("comets",[])).upper()
+          if "2020 F3" not in names and "NEOWISE" not in names:
+              print("NEOWISE was not returned by /night-comets", file=sys.stderr)
+              sys.exit(1)
+          PY
