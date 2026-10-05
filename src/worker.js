@@ -997,4 +997,301 @@ async function handleNightComets(url) {
     night:{observationTime:obsTime.toISOString(),label:cleanText(jpl.data?.obs_constraints?.["obs-time"])||obsTime.toISOString(),
       jpl:jpl.data?.obs_night||{},trackStart:start.toISOString(),trackStop:stop.toISOString()},
     candidateStats:{jpl:jpl.candidates.length,hoshinotori:hoshi.candidates.length,
-      hoshinotoriRecords:hoshi.recordsTotal,hoshinotoriOrbitReady:hoshi.orbitReady,selected:candidates.length},
+      hoshinotoriRecords:hoshi.recordsTotal,hoshinotoriOrbitReady:hoshi.orbitReady,selected:candidates.length},    totalObservable:Number(jpl.data?.total_objects||candidates.length),
+    shownObservable:Number(jpl.data?.shown_objects||comets.length),
+    comets,failures,warnings
+  });
+}
+
+/* =========================================================
+ * /comet-track
+ *
+ * 選択した彗星の長期軌道を取得。
+ * デフォルト: 30日前〜90日後、1日刻み。
+ *
+ * Query:
+ *   designation   推奨
+ *   query         designationが無い場合の検索文字列
+ *   lat
+ *   lon
+ *   alt_m
+ *   center        ISO datetime
+ *   before_days   default 30
+ *   after_days    default 90
+ *   step_days     default 1
+ * ======================================================= */
+async function handleCometTrack(url) {
+  const designationRaw = cleanText(url.searchParams.get("designation"));
+  const query = cleanText(url.searchParams.get("query"));
+  const lat = Number(url.searchParams.get("lat"));
+  const lon = Number(url.searchParams.get("lon"));
+  const altM = Number(url.searchParams.get("alt_m") || 0);
+  const center = new Date(url.searchParams.get("center"));
+  const beforeDays = clampInt(url.searchParams.get("before_days"), 30, 0, 365);
+  const afterDays = clampInt(url.searchParams.get("after_days"), 90, 1, 730);
+  const stepDays = clampInt(url.searchParams.get("step_days"), 1, 1, 30);
+
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    return jsonResponse({ ok:false, error:"lat is invalid" }, 400);
+  }
+  if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+    return jsonResponse({ ok:false, error:"lon is invalid" }, 400);
+  }
+  if (!isReasonableObserverAltitude(altM)) {
+    return jsonResponse({ ok:false, error:"alt_m is invalid" }, 400);
+  }
+  if (!isSupportedDate(center)) {
+    return jsonResponse({ ok:false, error:"center is invalid or out of supported range" }, 400);
+  }
+  if (query.length > 120 || /[\r\n\0]/.test(query)) {
+    return jsonResponse({ ok:false, error:"query is invalid" }, 400);
+  }
+  if (designationRaw && !isSafeDesignation(designationRaw)) {
+    return jsonResponse({ ok:false, error:"designation is invalid" }, 400);
+  }
+
+  let object = null;
+
+  if (designationRaw) {
+    object = {
+      designation: designationRaw,
+      name: query || designationRaw,
+      pdes: designationRaw,
+      spkid: ""
+    };
+  } else {
+    if (!query) {
+      return jsonResponse({ ok:false, error:"designation or query is required" }, 400);
+    }
+    object = await lookupComet(query);
+  }
+
+  const start = new Date(center.getTime() - beforeDays * 86400000);
+  const stop = new Date(center.getTime() + afterDays * 86400000);
+
+  const points = await fetchHorizonsObserverTrack({
+    designation: object.designation || object.pdes,
+    lat,
+    lon,
+    altM,
+    start,
+    stop,
+    stepSize: `${stepDays} d`
+  });
+
+  if (points.length < 3) {
+    return jsonResponse({
+      ok:false,
+      error:"JPL Horizons returned too few track points."
+    }, 502);
+  }
+
+  return jsonResponse({
+    ok:true,
+    source:"NASA/JPL Horizons",
+    object,
+    centerTime:center.toISOString(),
+    startTime:start.toISOString(),
+    stopTime:stop.toISOString(),
+    beforeDays,
+    afterDays,
+    stepDays,
+    observer:{ lat, lon, altM:Number.isFinite(altM)?altM:0 },
+    points
+  });
+}
+
+/* =========================================================
+ * Horizons
+ * ======================================================= */
+async function fetchHorizonsObserverTrack({
+  designation,
+  lat,
+  lon,
+  altM,
+  start,
+  stop,
+  stepSize
+}) {
+  if (!designation) {
+    throw new Error("Comet designation is missing.");
+  }
+
+  if (!isReasonableObserverAltitude(altM)) {
+    throw new Error("Observer altitude is outside the supported range.");
+  }
+  if (!isSafeDesignation(designation)) {
+    throw new Error("Unsafe comet designation.");
+  }
+
+  const altKm = altM / 1000;
+  const command = `DES=${designation};CAP;NOFRAG`;
+
+  const h = new URL("https://ssd.jpl.nasa.gov/api/horizons.api");
+  h.searchParams.set("format", "json");
+  h.searchParams.set("COMMAND", `'${command}'`);
+  h.searchParams.set("OBJ_DATA", "'NO'");
+  h.searchParams.set("MAKE_EPHEM", "'YES'");
+  h.searchParams.set("EPHEM_TYPE", "'OBSERVER'");
+  h.searchParams.set("CENTER", "'coord@399'");
+  h.searchParams.set("COORD_TYPE", "'GEODETIC'");
+  h.searchParams.set("SITE_COORD", `'${lon},${lat},${altKm}'`);
+  h.searchParams.set("START_TIME", `'${horizonsDateUTC(start)}'`);
+  h.searchParams.set("STOP_TIME", `'${horizonsDateUTC(stop)}'`);
+  h.searchParams.set("STEP_SIZE", `'${stepSize}'`);
+  h.searchParams.set("TIME_TYPE", "'UT'");
+  h.searchParams.set("CAL_FORMAT", "'JD'");
+  h.searchParams.set("ANG_FORMAT", "'DEG'");
+  h.searchParams.set("CSV_FORMAT", "'YES'");
+  h.searchParams.set("QUANTITIES", "'1'");
+  h.searchParams.set("REF_SYSTEM", "'ICRF'");
+  h.searchParams.set("APPARENT", "'AIRLESS'");
+  h.searchParams.set("ELEV_CUT", "'-90'");
+  h.searchParams.set("SKIP_DAYLT", "'NO'");
+
+  const response = await fetchWithTimeout(h.toString(), {
+    headers: {
+      "User-Agent": USER_AGENT,
+      "Accept": "application/json"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`JPL Horizons HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  if (data.error) {
+    throw new Error(String(data.error));
+  }
+
+  const resultText = String(data.result || "");
+
+  if (
+    /No matches found|Matching small-bodies|Cannot interpret date|ERROR/i
+      .test(resultText)
+  ) {
+    throw new Error(
+      "JPL Horizons could not uniquely resolve this comet or date range."
+    );
+  }
+
+  const points = parseHorizonsObserverCsv(resultText);
+
+  if (points.length < 2) {
+    throw new Error("Could not parse JPL Horizons RA/Dec points.");
+  }
+
+  return points;
+}
+
+function parseHorizonsObserverCsv(resultText) {
+  const text = String(resultText || "");
+  const a = text.indexOf("$$SOE");
+  const b = text.indexOf("$$EOE");
+
+  if (a < 0 || b < 0 || b <= a) {
+    return [];
+  }
+
+  const body = text.slice(a + 5, b).trim();
+  const points = [];
+
+  for (const raw of body.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    const fields = line.split(",").map(v => v.trim());
+    const numeric = fields
+      .map(v => Number(v))
+      .filter(v => Number.isFinite(v));
+
+    if (numeric.length < 3) continue;
+
+    const jd = numeric[0];
+    const ra = numeric[numeric.length - 2];
+    const dec = numeric[numeric.length - 1];
+
+    if (!(jd > 2000000 && jd < 3000000)) continue;
+    if (!(ra >= 0 && ra <= 360)) continue;
+    if (!(dec >= -90 && dec <= 90)) continue;
+
+    const time = jdToIso(jd);
+    if (!time) continue;
+
+    points.push({ time, ra, dec });
+  }
+
+  return points;
+}
+
+/* =========================================================
+ * Horizons Lookup
+ * ======================================================= */
+async function lookupComet(query) {
+  const cleanedQuery = cleanText(query);
+  if (!cleanedQuery || cleanedQuery.length > 120 || /[\r\n\0]/.test(cleanedQuery)) {
+    throw new Error("Comet lookup query is invalid.");
+  }
+
+  const attempts = [
+    cleanedQuery,
+    cleanedQuery
+      .replace(/\s*\([^)]*\)\s*/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  ].filter((v, i, a) => v && a.indexOf(v) === i);
+
+  let lastError = null;
+
+  for (const q of attempts) {
+    const lookup = new URL(
+      "https://ssd.jpl.nasa.gov/api/horizons_lookup.api"
+    );
+    lookup.searchParams.set("sstr", q);
+    lookup.searchParams.set("group", "com");
+
+    try {
+      const response = await fetchWithTimeout(lookup.toString(), {
+        headers: {
+          "User-Agent": USER_AGENT,
+          "Accept": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        lastError = new Error(
+          `Horizons Lookup HTTP ${response.status}`
+        );
+        continue;
+      }
+
+      const data = await response.json();
+      const results = Array.isArray(data.result) ? data.result : [];
+
+      if (!results.length) continue;
+
+      const best =
+        results.find(x => x.pdes) ||
+        results[0];
+
+      const designation = cleanText(best.pdes);
+
+      if (!designation) continue;
+
+      return {
+        designation,
+        name: cleanText(best.name) || q,
+        pdes: designation,
+        spkid: cleanText(best.spkid)
+      };
+
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError ||
+    new Error("JPL Horizons could not identify the comet.");
+}
