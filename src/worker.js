@@ -11,7 +11,7 @@
  * 旧 /horizons-track は /comet-track の互換エイリアスとして残しています。
  *
  * 公開向け追加:
- * - GitHub Pages origin のみCORS許可
+ * - GitHub Pages と Nicole Portable Launcher のloopback originのみCORS許可
  * - 成功レスポンスのEdge Cache
  * - 入力値・彗星designationの検証
  * - JPLリクエストのタイムアウト
@@ -22,7 +22,10 @@
  */
 
 const ALLOWED_ORIGINS = new Set([
-  "https://kensukesuga86.github.io"
+  "https://kensukesuga86.github.io",
+  "http://127.0.0.1:18777",
+  "http://localhost:18777",
+  "http://[::1]:18777"
 ]);
 
 const USER_AGENT =
