@@ -2,6 +2,23 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "astro-nicole",
   "main": "src/worker.js",
-  "compatibility_date": "2026-10-06",
-  "workers_dev": true
+  "compatibility_date": "2026-09-19",
+  "workers_dev": true,
+  "preview_urls": false,
+  "ratelimits": [
+    {
+      "name": "HEAVY_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 6,
+        "period": 60
+      }
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    }
+  }
 }
