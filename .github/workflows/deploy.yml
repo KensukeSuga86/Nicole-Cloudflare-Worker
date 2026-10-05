@@ -31,7 +31,8 @@ jobs:
         run: |
           set -euo pipefail
           URL='https://astro-nicole.hideld12.workers.dev/night-comets?lat=42.9236&lon=143.1961&alt_m=40&obs_time=2020-07-15T21%3A00%3A00%2B09%3A00&vmag_max=12&max_comets=20&step_minutes=15&candidate_mode=hybrid'
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 "$URL" -o response.json
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 -H 'Origin: http://127.0.0.1:18777' -D headers.txt "$URL" -o response.json
+          grep -qi '^access-control-allow-origin: http://127.0.0.1:18777' headers.txt
           python3 - <<'PY'
           import json, sys
           data=json.load(open("response.json",encoding="utf-8"))
