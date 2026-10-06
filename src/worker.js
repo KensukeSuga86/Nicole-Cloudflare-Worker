@@ -460,8 +460,14 @@ function appendVary(current, value) {
   return parts.join(", ");
 }
 
+// Bump when cached response content changes meaning, so stale edge-cache
+// entries from earlier deployments are never served.
+// 2: Horizons RA/Dec column parsing fix.
+const CACHE_KEY_VERSION = "2";
+
 function canonicalCacheRequest(request) {
   const url = new URL(request.url);
+  url.searchParams.set("__nicole_cache_v", CACHE_KEY_VERSION);
   url.searchParams.sort();
   return new Request(url.toString(), { method: "GET" });
 }
@@ -1198,6 +1204,24 @@ function parseHorizonsObserverCsv(resultText) {
     return [];
   }
 
+  // Horizons CSV rows look like "JD, solar flag, lunar flag, RA, DEC," —
+  // the flag columns are often blank and every row ends with a comma.
+  // Blank fields must never be treated as numbers (Number("") === 0).
+  // Locate the columns from the header line that precedes $$SOE.
+  const headerLines = text.slice(0, a).split(/\r?\n/);
+  let header = null;
+  for (let k = headerLines.length - 1; k >= 0; k--) {
+    if (/R\.A\./i.test(headerLines[k]) && /DEC/i.test(headerLines[k])) {
+      header = headerLines[k].split(",").map(v => v.trim());
+      break;
+    }
+  }
+  const col = re => header ? header.findIndex(h => re.test(h)) : -1;
+  const iJd = col(/JD/i);
+  const iRa = col(/^R\.A\./i);
+  const iDec = col(/^DEC/i);
+  const useHeader = iJd >= 0 && iRa >= 0 && iDec >= 0;
+
   const body = text.slice(a + 5, b).trim();
   const points = [];
 
@@ -1206,15 +1230,22 @@ function parseHorizonsObserverCsv(resultText) {
     if (!line) continue;
 
     const fields = line.split(",").map(v => v.trim());
-    const numeric = fields
-      .map(v => Number(v))
-      .filter(v => Number.isFinite(v));
+    let jd, ra, dec;
 
-    if (numeric.length < 3) continue;
-
-    const jd = numeric[0];
-    const ra = numeric[numeric.length - 2];
-    const dec = numeric[numeric.length - 1];
+    if (useHeader) {
+      jd = fields[iJd] === "" ? NaN : Number(fields[iJd]);
+      ra = fields[iRa] === "" ? NaN : Number(fields[iRa]);
+      dec = fields[iDec] === "" ? NaN : Number(fields[iDec]);
+    } else {
+      const numeric = fields
+        .filter(v => v !== "")
+        .map(v => Number(v))
+        .filter(v => Number.isFinite(v));
+      if (numeric.length < 3) continue;
+      jd = numeric[0];
+      ra = numeric[numeric.length - 2];
+      dec = numeric[numeric.length - 1];
+    }
 
     if (!(jd > 2000000 && jd < 3000000)) continue;
     if (!(ra >= 0 && ra <= 360)) continue;

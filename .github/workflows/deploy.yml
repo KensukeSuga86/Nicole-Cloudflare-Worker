@@ -51,4 +51,14 @@ jobs:
               sys.exit(1)
           pts=neo.get("points") or []
           print(json.dumps({"neowisePointCount":len(pts),"first":pts[0] if pts else None,"last":pts[-1] if pts else None,"middle":pts[len(pts)//2] if pts else None},ensure_ascii=False,indent=2))
+          # Position sanity check: NEOWISE at 2020-07-15T12:00Z was near RA 118 deg, Dec +47 deg.
+          # Guards against RA/Dec column shifts (e.g. Dec reported as 0).
+          mid=pts[len(pts)//2] if pts else None
+          if not mid or not (108 <= float(mid.get("ra",-1)) <= 128 and 42 <= float(mid.get("dec",-99)) <= 52):
+              print(f"NEOWISE position out of expected range: {mid}", file=sys.stderr)
+              sys.exit(1)
+          bad=[c.get("designation") for c in data.get("comets",[]) if c.get("points") and all(float(p.get("dec",0))==0.0 for p in c["points"])]
+          if bad:
+              print(f"Comets with all-zero declination (parser regression): {bad}", file=sys.stderr)
+              sys.exit(1)
           PY
