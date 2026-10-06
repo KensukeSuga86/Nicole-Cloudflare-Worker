@@ -62,3 +62,12 @@ jobs:
               print(f"Comets with all-zero declination (parser regression): {bad}", file=sys.stderr)
               sys.exit(1)
           PY
+
+      - name: Smoke test meteor shower data
+        shell: bash
+        run: |
+          set -euo pipefail
+          for Y in 2026 2027; do
+            curl --fail --silent --show-error --retry 3 --retry-delay 2 -H 'Origin: http://127.0.0.1:18777' "https://astro-nicole.hideld12.workers.dev/meteors?year=${Y}" -o "meteors-${Y}.json"
+            python3 -c "import json,sys; d=json.load(open('meteors-${Y}.json')); n=len(d.get('showers',[])); print('${Y}', d.get('ok'), n); sys.exit(0 if d.get('ok') and n>=13 else 1)"
+          done

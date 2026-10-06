@@ -288,6 +288,260 @@ const METEOR_SHOWERS_2026 = [
   }
 ];
 
+/*
+ * 2027: IMO 2027 Meteor Shower Calendar (IMO INFO(3-26), ed. J. Rendtel,
+ * DOI 10.13140/RG.2.2.16856.46082) - Table 5 working list and shower texts.
+ * Peak dates are UT dates. peakMoonPercent is the Moon's illuminated fraction
+ * at the peak time (15:00 UT when no time is given).
+ */
+const METEOR_SHOWERS_2027 = [
+  {
+    "name": "Quadrantids",
+    "nameJa": "しぶんぎ座流星群",
+    "code": "QUA",
+    "activeStart": "2026-12-28",
+    "activeEnd": "2027-01-12",
+    "activityLabel": "12月28日〜1月12日",
+    "peakStart": "2027-01-04",
+    "peakLabel": "1月4日ごろ",
+    "peakUT": "03:25",
+    "ra": 230,
+    "dec": 49,
+    "zhr": 80,
+    "velocityKms": 41,
+    "parent": "2003 EH1",
+    "peakMoonPercent": 12,
+    "note": "極大が鋭く、ピーク前後の短時間に活動が集中しやすい流星群です。2027年は新月前で月明かりの影響がない好条件ですが、極大は日本時間の昼（4日12時25分ごろ）にあたるため、日本では4日未明が観測の中心です。"
+  },
+  {
+    "name": "Lyrids",
+    "nameJa": "こと座流星群",
+    "code": "LYR",
+    "activeStart": "2027-04-14",
+    "activeEnd": "2027-04-30",
+    "activityLabel": "4月14日〜4月30日",
+    "peakStart": "2027-04-23",
+    "peakLabel": "4月23日ごろ",
+    "peakUT": "01:40",
+    "ra": 271,
+    "dec": 34,
+    "zhr": 18,
+    "velocityKms": 49,
+    "parent": "C/1861 G1 Thatcher",
+    "peakMoonPercent": 95,
+    "note": "突発的に活動が強まることがあります。2027年は満月の3日後で、月明かりの影響が大きい条件です。"
+  },
+  {
+    "name": "Eta Aquariids",
+    "nameJa": "みずがめ座η流星群",
+    "code": "ETA",
+    "activeStart": "2027-04-19",
+    "activeEnd": "2027-05-28",
+    "activityLabel": "4月19日〜5月28日",
+    "peakStart": "2027-05-06",
+    "peakLabel": "5月6日ごろ",
+    "peakUT": "09:00",
+    "ra": 338,
+    "dec": -1,
+    "zhr": 50,
+    "velocityKms": 66,
+    "parent": "1P/Halley",
+    "peakMoonPercent": 0,
+    "note": "日本では放射点が低い時間帯が多く、夜明け前が観測の中心です。2027年は極大期に月明かりの影響がありません。"
+  },
+  {
+    "name": "Southern Delta Aquariids",
+    "nameJa": "みずがめ座δ南流星群",
+    "code": "SDA",
+    "activeStart": "2027-07-12",
+    "activeEnd": "2027-08-23",
+    "activityLabel": "7月12日〜8月23日",
+    "peakStart": "2027-07-31",
+    "peakLabel": "7月31日ごろ",
+    "peakUT": "—",
+    "ra": 340,
+    "dec": -16,
+    "zhr": 25,
+    "velocityKms": 41,
+    "parent": "96P/Machholz 系と関連が示唆",
+    "peakMoonPercent": 5,
+    "note": "南寄りの放射点で、南の空が開けた場所が有利です。2027年は極大期に月明かりの影響がありません。"
+  },
+  {
+    "name": "Alpha Capricornids",
+    "nameJa": "やぎ座α流星群",
+    "code": "CAP",
+    "activeStart": "2027-07-03",
+    "activeEnd": "2027-08-15",
+    "activityLabel": "7月3日〜8月15日",
+    "peakStart": "2027-07-31",
+    "peakLabel": "7月31日ごろ",
+    "peakUT": "—",
+    "ra": 307,
+    "dec": -10,
+    "zhr": 5,
+    "velocityKms": 23,
+    "parent": "169P/NEAT",
+    "peakMoonPercent": 5,
+    "note": "数は多くありませんが、比較的ゆっくりした明るい流星が見られることがあります。2027年は極大期に月明かりの影響がありません。"
+  },
+  {
+    "name": "Perseids",
+    "nameJa": "ペルセウス座流星群",
+    "code": "PER",
+    "activeStart": "2027-07-17",
+    "activeEnd": "2027-08-24",
+    "activityLabel": "7月17日〜8月24日",
+    "peakStart": "2027-08-13",
+    "peakLabel": "8月13日ごろ",
+    "peakUT": "08:00–10:00",
+    "ra": 48,
+    "dec": 58,
+    "zhr": 110,
+    "velocityKms": 59,
+    "parent": "109P/Swift-Tuttle",
+    "peakMoonPercent": 87,
+    "note": "年間でも代表的な流星群です。2027年は上弦と満月の間の月があり、月が沈んだ後の未明が観測の中心です。木星の摂動で流星体の流れが地球軌道に近づき、例年より1〜2割多い可能性が予測されています。"
+  },
+  {
+    "name": "Draconids",
+    "nameJa": "りゅう座流星群",
+    "code": "DRA",
+    "activeStart": "2027-10-06",
+    "activeEnd": "2027-10-10",
+    "activityLabel": "10月6日〜10月10日",
+    "peakStart": "2027-10-09",
+    "peakLabel": "10月9日ごろ",
+    "peakUT": "07:00",
+    "ra": 263,
+    "dec": 56,
+    "zhr": 5,
+    "velocityKms": 20,
+    "parent": "21P/Giacobini-Zinner",
+    "peakMoonPercent": 67,
+    "note": "通常は穏やかですが、年によって突発的な活動が見られることがあります。2027年は上弦過ぎの月があり、放射点が高い宵のうちは月明かりの影響を受けます。"
+  },
+  {
+    "name": "Orionids",
+    "nameJa": "オリオン座流星群",
+    "code": "ORI",
+    "activeStart": "2027-10-02",
+    "activeEnd": "2027-11-07",
+    "activityLabel": "10月2日〜11月7日",
+    "peakStart": "2027-10-22",
+    "peakLabel": "10月22日ごろ",
+    "peakUT": "—",
+    "ra": 95,
+    "dec": 16,
+    "zhr": 20,
+    "velocityKms": 66,
+    "parent": "1P/Halley",
+    "peakMoonPercent": 51,
+    "note": "高速の流星が特徴です。2027年は極大時に明るい月があり、放射点が昇っている時間帯の空が明るくなります。"
+  },
+  {
+    "name": "Southern Taurids",
+    "nameJa": "おうし座南流星群",
+    "code": "STA",
+    "activeStart": "2027-09-20",
+    "activeEnd": "2027-11-20",
+    "activityLabel": "9月20日〜11月20日",
+    "peakStart": "2027-11-06",
+    "peakLabel": "11月6日ごろ",
+    "peakUT": "—",
+    "ra": 52,
+    "dec": 15,
+    "zhr": 7,
+    "velocityKms": 27,
+    "parent": "2P/Encke 系",
+    "peakMoonPercent": 53,
+    "note": "ゆっくりした明るい流星や火球が現れることがあります。10月中旬にも小さな極大があります。"
+  },
+  {
+    "name": "Northern Taurids",
+    "nameJa": "おうし座北流星群",
+    "code": "NTA",
+    "activeStart": "2027-10-20",
+    "activeEnd": "2027-12-10",
+    "activityLabel": "10月20日〜12月10日",
+    "peakStart": "2027-11-13",
+    "peakLabel": "11月13日ごろ",
+    "peakUT": "—",
+    "ra": 58,
+    "dec": 22,
+    "zhr": 5,
+    "velocityKms": 29,
+    "parent": "2P/Encke 系",
+    "peakMoonPercent": 100,
+    "note": "活動数は少なめですが、火球が目立つことがあります。"
+  },
+  {
+    "name": "Leonids",
+    "nameJa": "しし座流星群",
+    "code": "LEO",
+    "activeStart": "2027-11-06",
+    "activeEnd": "2027-11-30",
+    "activityLabel": "11月6日〜11月30日",
+    "peakStart": "2027-11-18",
+    "peakLabel": "11月18日ごろ",
+    "peakUT": "06:00",
+    "ra": 152,
+    "dec": 22,
+    "zhr": 15,
+    "velocityKms": 71,
+    "parent": "55P/Tempel-Tuttle",
+    "peakMoonPercent": 80,
+    "note": "非常に高速な流星で知られます。2027年は11月17〜20日にかけて複数のダストトレイルとの遭遇が予測され、ZHR数十程度の活動の可能性があります。月明かりの影響があります。"
+  },
+  {
+    "name": "Geminids",
+    "nameJa": "ふたご座流星群",
+    "code": "GEM",
+    "activeStart": "2027-12-04",
+    "activeEnd": "2027-12-20",
+    "activityLabel": "12月4日〜12月20日",
+    "peakStart": "2027-12-14",
+    "peakLabel": "12月14日ごろ",
+    "peakUT": "20:00",
+    "ra": 112,
+    "dec": 33,
+    "zhr": 150,
+    "velocityKms": 35,
+    "parent": "3200 Phaethon",
+    "peakMoonPercent": 98,
+    "note": "年間最大級の活動を見せる流星群です。2027年は極大が満月と重なり、月明かりの影響が大きい条件です。"
+  },
+  {
+    "name": "Ursids",
+    "nameJa": "こぐま座流星群",
+    "code": "URS",
+    "activeStart": "2027-12-17",
+    "activeEnd": "2027-12-26",
+    "activityLabel": "12月17日〜12月26日",
+    "peakStart": "2027-12-23",
+    "peakLabel": "12月23日ごろ",
+    "peakUT": "04:00",
+    "ra": 217,
+    "dec": 76,
+    "zhr": 10,
+    "velocityKms": 33,
+    "parent": "8P/Tuttle",
+    "peakMoonPercent": 21,
+    "note": "北の空に放射点があり、日本からは長時間観測しやすい流星群です。2027年は極大期に月明かりの影響がほとんどありません。"
+  }
+];
+
+const METEOR_DATA_BY_YEAR = {
+  2026: {
+    source: "Nicole embedded annual meteor-shower data",
+    showers: METEOR_SHOWERS_2026
+  },
+  2027: {
+    source: "IMO 2027 Meteor Shower Calendar (IMO INFO(3-26)); moon illumination computed by Nicole",
+    showers: METEOR_SHOWERS_2027
+  }
+};
+
 /* =========================================================
  * Worker entry
  * ======================================================= */
@@ -321,7 +575,7 @@ export default {
           ok: true,
           message: "Nicole API is running",
           endpoints: [
-            "/meteors?year=2026",
+            "/meteors?year=2027",
             "/night-comets",
             "/comet-track"
           ]
@@ -650,22 +904,26 @@ async function mapLimit(items, limit, fn) {
 function handleMeteors(url) {
   const year = Number(url.searchParams.get("year")) ||
     new Date().getUTCFullYear();
+  const entry = METEOR_DATA_BY_YEAR[year];
+  const availableYears = Object.keys(METEOR_DATA_BY_YEAR).map(Number);
 
-  if (year !== 2026) {
+  if (!entry) {
     return jsonResponse({
       ok:false,
-      error:"Nicole Worker currently contains meteor-shower data for 2026 only.",
+      error:`Nicole Worker currently contains meteor-shower data for ${availableYears.join(", ")} only.`,
       year,
+      availableYears,
       showers:[]
     }, 404);
   }
 
   return jsonResponse({
     ok:true,
-    source:"Nicole embedded annual meteor-shower data",
-    year:2026,
+    source:entry.source,
+    year,
+    availableYears,
     updated_at:new Date().toISOString(),
-    showers:METEOR_SHOWERS_2026
+    showers:entry.showers
   });
 }
 
