@@ -717,7 +717,9 @@ function appendVary(current, value) {
 // Bump when cached response content changes meaning, so stale edge-cache
 // entries from earlier deployments are never served.
 // 2: Horizons RA/Dec column parsing fix.
-const CACHE_KEY_VERSION = "2";
+// 3: Hoshinotori candidates filtered by estimated brightness (M1/K1),
+//    defunct D/ comets excluded, two-body Kepler solver convergence fix.
+const CACHE_KEY_VERSION = "3";
 
 function canonicalCacheRequest(request) {
   const url = new URL(request.url);
@@ -941,7 +943,9 @@ function handleMeteors(url) {
  *   lon
  *   alt_m
  *   obs_time       ISO datetime
- *   vmag_max       default 12 (JPL candidate filter only)
+ *   vmag_max       default 12 (JPL filter; Hoshinotori candidates use the
+ *                  M1/K1 total-magnitude estimate and are dropped when it is
+ *                  unknown, except in candidate_mode=hoshinotori)
  *   max_comets     default 20, max 25
  *   step_minutes   default 15, min 5
  *   candidate_mode auto|jpl|hoshinotori|hybrid (default hybrid)
@@ -962,13 +966,15 @@ function normRad(x) {
 
 function solveEllipticEccentricAnomaly(M, e) {
   M = ((M + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
-  let E = e < 0.8 ? M : Math.PI;
-  for (let k = 0; k < 20; k++) {
+  // Start on the same side as M. For high e, starting at +PI with a negative
+  // M (comet past aphelion) made Newton's method jump and not converge.
+  let E = e < 0.8 ? M : (M < 0 ? -Math.PI : Math.PI);
+  for (let k = 0; k < 60; k++) {
     const f = E - e * Math.sin(E) - M;
     const fp = 1 - e * Math.cos(E);
     const d = f / fp;
     E -= d;
-    if (Math.abs(d) < 1e-10) break;
+    if (Math.abs(d) < 1e-12) break;
   }
   return E;
 }
@@ -1099,7 +1105,17 @@ function approximateCometTrack(record, {lat,lon,start,stop,stepMinutes}) {
   return points;
 }
 
-async function fetchHoshinotoriCandidatePool({obsTime,lat,lon,maxComets}) {
+// JPL comet total magnitude: T = M1 + 5 log10(delta) + K1 log10(r).
+// Returns null when the comet has no published photometric model.
+function estimateCometTotalMagnitude(record, helioAu, topoAu) {
+  const m1 = Number(record.m1), k1 = Number(record.k1);
+  if (record.m1 == null || record.k1 == null || !Number.isFinite(m1) || !Number.isFinite(k1)) return null;
+  if (!(helioAu > 0) || !(topoAu > 0)) return null;
+  const mag = m1 + 5 * Math.log10(topoAu) + k1 * Math.log10(helioAu);
+  return Number.isFinite(mag) ? mag : null;
+}
+
+async function fetchHoshinotoriCandidatePool({obsTime,lat,lon,maxComets,vmagMax=Infinity,allowUnknownMagnitude=false}) {
   const response = await fetchWithTimeout(HOSHINOTORI_INDEX_URL, {
     headers:{"User-Agent":USER_AGENT,"Accept":"application/json"}
   }, HOSHINOTORI_FETCH_TIMEOUT_MS);
@@ -1109,10 +1125,12 @@ async function fetchHoshinotoriCandidatePool({obsTime,lat,lon,maxComets}) {
   const complete = records.filter(r =>
     [r.q,r.e,r.tp,r.i,r.om,r.w].every(v => Number.isFinite(Number(v)))
   );
+  // D/ comets are defunct (disappeared or destroyed); never offer them.
+  const usable = complete.filter(r => String(r.prefix || "").toUpperCase() !== "D");
 
   const sampleOffsets = [-6,0,6].map(h=>h*3600000);
   const pool = [];
-  for (const r of complete) {
+  for (const r of usable) {
     let bestAlt = -90, center = null;
     for (const off of sampleOffsets) {
       const p = approximateCometObserver(r,new Date(obsTime.getTime()+off),lat,lon);
@@ -1124,6 +1142,10 @@ async function fetchHoshinotoriCandidatePool({obsTime,lat,lon,maxComets}) {
     // Wide geometric gate. It intentionally avoids brightness claims because
     // many historical comets lack consistent photometric parameters.
     if (center.helioAu > 8 || center.topoAu > 8 || bestAlt < -8) continue;
+    const estMag = estimateCometTotalMagnitude(r, center.helioAu, center.topoAu);
+    // Brightness gate: drop comets estimated fainter than vmag_max, and (unless
+    // explicitly requested) comets whose brightness cannot be estimated.
+    if (estMag == null ? !allowUnknownMagnitude : estMag > vmagMax) continue;
     const geometryScore =
       5*Math.log10(Math.max(center.topoAu,1e-5)) +
       10*Math.log10(Math.max(center.helioAu,1e-5)) -
@@ -1131,17 +1153,19 @@ async function fetchHoshinotoriCandidatePool({obsTime,lat,lon,maxComets}) {
     pool.push({
       designation:cleanText(r.designation || r.pdes),
       name:cleanText(r.full_name || r.name || r.designation),
-      mag:null,
+      mag:estMag == null ? null : Math.round(estMag * 10) / 10,
+      magSource:estMag == null ? null : "Hoshinotori M1/K1 estimate",
       rise:"",transit:"",set:"",maxObservable:"",
       helioAu:center.helioAu,
       topoAu:center.topoAu,
       hoshinotori:r,
       candidateSource:"Hoshinotori",
       approximateAltitude:bestAlt,
-      geometryScore
+      geometryScore,
+      sortKey: estMag == null ? 100 + geometryScore : estMag
     });
   }
-  pool.sort((a,b)=>a.geometryScore-b.geometryScore);
+  pool.sort((a,b)=>a.sortKey-b.sortKey);
   return {
     recordsTotal:records.length,
     orbitReady:complete.length,
@@ -1229,7 +1253,7 @@ async function handleNightComets(url) {
     catch(e){ warnings.push(String(e?.message||e)); }
   }
   if (resolvedMode !== "jpl") {
-    try { hoshi = await fetchHoshinotoriCandidatePool({obsTime,lat,lon,maxComets}); }
+    try { hoshi = await fetchHoshinotoriCandidatePool({obsTime,lat,lon,maxComets,vmagMax,allowUnknownMagnitude:resolvedMode === "hoshinotori"}); }
     catch(e){ warnings.push(String(e?.message||e)); }
   }
 
@@ -1249,7 +1273,7 @@ async function handleNightComets(url) {
         ephemerisSource="Hoshinotori two-body fallback";
       } else throw e;
     }
-    return {...comet,points,ephemerisSource,hoshinotori:undefined,geometryScore:undefined};
+    return {...comet,points,ephemerisSource,hoshinotori:undefined,geometryScore:undefined,sortKey:undefined};
   });
 
   const comets=tracks.filter(x=>x&&!x.__error&&Array.isArray(x.points)&&x.points.length>=2);

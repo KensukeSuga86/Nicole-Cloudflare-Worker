@@ -57,6 +57,10 @@ jobs:
           if not mid or not (108 <= float(mid.get("ra",-1)) <= 128 and 42 <= float(mid.get("dec",-99)) <= 52):
               print(f"NEOWISE position out of expected range: {mid}", file=sys.stderr)
               sys.exit(1)
+          faint=[(c.get("designation"),c.get("mag")) for c in data.get("comets",[]) if c.get("candidateSource")=="Hoshinotori" and (c.get("mag") is None or float(c["mag"])>12)]
+          if faint:
+              print(f"Hoshinotori candidates without brightness or fainter than vmag_max: {faint}", file=sys.stderr)
+              sys.exit(1)
           bad=[c.get("designation") for c in data.get("comets",[]) if c.get("points") and all(float(p.get("dec",0))==0.0 for p in c["points"])]
           if bad:
               print(f"Comets with all-zero declination (parser regression): {bad}", file=sys.stderr)
