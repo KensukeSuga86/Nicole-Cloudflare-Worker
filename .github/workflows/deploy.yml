@@ -26,6 +26,10 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
 
+      - name: Wait for deployment to propagate
+        # Smoke tests right after deploy sometimes hit the previous version.
+        run: sleep 45
+
       - name: Smoke test historical comet lookup
         shell: bash
         run: |
